@@ -5,10 +5,17 @@ library(dplyr)
 library(tidyr)
 library(plyr)
 library(ggplot2)
+library(knitr)
 
 # load in data
 listings.gz <- read_csv(file = "listings.csv.gz")
-listings.gz <- listings_csv
+
+# look at raw data
+head(listings.gz)
+summary(listings.gz)
+
+
+# ------ clean dataframe ------
 
 # clean listings.gz to use only relevant variables
 list2 <- listings.gz[ , c(49:50, 52:59, 80)]
@@ -21,6 +28,13 @@ list2$amenities <- stri_replace_all_regex(str = list2$amenities, pattern = "\"",
 # use complete case
 list2$amenities <- ifelse(list2$amenities == "", NA, list2$amenities)
 list3 <- list2[complete.cases(list2), ]
+
+# look at cleaned and transformed dataset
+head(list3)
+summary(list3)
+
+
+# ------ analyze attributes ------
 
 # linear regression on attributes
 fit <- lm(review_scores_rating ~ property_type + room_type + accommodates +
@@ -35,8 +49,8 @@ attributes <- c("property type: Bungalow", "property type: Condominium", "proper
 estimates <- c(2.33567, 2.11278, 3.35298, 1.50701, 2.65329, 1.30589, -0.56145, -4.06204, -0.33131,
                0.60600, -0.22101, -1.67170, -2.06934)
 
-# create one df of significant attributes
-df <- as.data.frame(attributes, estimates, stringsAsFactors = FALSE)
+# create one dataframe of significant attributes
+df <- as.data.frame(attributes, stringsAsFactors = FALSE)
 df2 <- as.data.frame(estimates)
 df <- cbind(df, df2)
 
@@ -45,23 +59,24 @@ df_pos <- df[df$estimates > 0, ]
 df_neg <- df[df$estimates < 0, ]
 
 # make bar plot of positive attributes
-p <- ggplot(data = df_pos, aes(x = reorder(attributes, estimates), y = estimates)) + geom_bar(stat = "identity", fill = "steelblue") +
+a <- ggplot(data = df_pos, aes(x = reorder(attributes, estimates), y = estimates)) + geom_bar(stat = "identity", fill = "steelblue") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1)) + ylab("Change in Review Score") +
   xlab("Host's Attributes") + ggtitle("Attributes of Hosts that Significantly and Positively \nAffect Review Score") +
   theme(plot.title = element_text(hjust = 0.5))
-p
 
 # make bar plot of negative attributes
-p <- ggplot(data = df_neg2, aes(x = reorder(attributes, -estimates), y = estimates)) + geom_bar(stat = "identity", fill = "maroon") +
+b <- ggplot(data = df_neg, aes(x = reorder(attributes, -estimates), y = estimates)) + geom_bar(stat = "identity", fill = "maroon") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1)) + ylab("Change in Review Score") +
   xlab("Host's Attributes") + ggtitle("Attributes of Hosts that Significantly and Negatively \nAffect Review Score") +
   theme(plot.title = element_text(hjust = 0.5))
-p
 
-# gave df IDs
+
+# ------ analyze amenities ------
+
+# give df IDs
 list3$id <- 1:nrow(list3)
 
-# split attributes' list into multiple variables
+# split amenities' list into multiple variables
 dat <- with(list3, strsplit(amenities, ','))
 df2 <- data.frame(id = factor(rep(list3$id, times = lengths(dat)),
                               levels = list3$id), amenities = unlist(dat))
@@ -101,15 +116,13 @@ amen_pos <- df_amen[df_amen$values > 0, ]
 amen_neg <- df_amen[df_amen$values < 0, ]
 
 # make bar plot of positive amenities
-p <- ggplot(data = amen_pos, aes(x = reorder(amen, values), y = values)) + geom_bar(stat = "identity", fill = "steelblue") +
+c <- ggplot(data = amen_pos, aes(x = reorder(amen, values), y = values)) + geom_bar(stat = "identity", fill = "steelblue") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1)) + ylab("Change in Review Score") +
   xlab("Host's Amenities") + ggtitle("Amenities of Hosts that Significantly and Positively \nAffect Review Score") +
   theme(plot.title = element_text(hjust = 0.5))
-p
 
 # make bar plot of negative amenities
-p <- ggplot(data = amen_neg, aes(x = reorder(amen, -values), y = values)) + geom_bar(stat = "identity", fill = "maroon") +
+d <- ggplot(data = amen_neg, aes(x = reorder(amen, -values), y = values)) + geom_bar(stat = "identity", fill = "maroon") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1)) + ylab("Change in Review Score") +
   xlab("Host's Amenities") + ggtitle("Amenities of Hosts that Significantly and Negatively \nAffect Review Score") +
   theme(plot.title = element_text(hjust = 0.5))
-p
